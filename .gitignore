@@ -1,0 +1,12 @@
+.cproject
+.mxproject
+.project
+.settings
+
+Core/Startup
+Debug
+Drivers
+Middlewares
+
+*.ld
+*.launch
