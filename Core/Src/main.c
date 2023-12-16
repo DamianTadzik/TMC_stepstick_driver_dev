@@ -48,6 +48,7 @@
 /* USER CODE BEGIN PV */
 uint8_t triggered = 0;
 uint8_t command_triggered = 0;
+//uint16_t trigger_counter = 0;
 
 /* USER CODE END PV */
 
@@ -202,6 +203,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
 	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 	  command_triggered = 1;
+//	  trigger_counter++;
 	  HAL_TIM_Base_Stop_IT(&htim2);
 	  triggered = 0;
   }
