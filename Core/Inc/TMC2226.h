@@ -98,10 +98,10 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed);
 #define TMC2226_WRITE 0x80
 
 /* ################ Low Level functions ################ */
-uint32_t read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
+uint32_t read_access(TMC2226_NodeAddress node_address, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram);
 
-void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
+void write_access(TMC2226_NodeAddress node_address, TMC2226_WriteRegisters register_address,
 		uint32_t data, uint64_t *sent_datagram);
 
 uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length);

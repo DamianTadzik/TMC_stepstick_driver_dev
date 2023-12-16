@@ -51,7 +51,16 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed)
 /* ################ Low level functions ################ */
 UART_HandleTypeDef *huart = &huart1;
 
-uint32_t read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
+/**
+ * \brief			LL function for obtaining registry value from TMC2226
+ * \param[in]		node_address: chooses node to read from
+ * \param[in]		register_address: readable register address to read from
+ * \param[out]		received_datagram: storing received datagram for debugging purposes
+ * \param[out]		sent_datagram: storing sent datagram for debugging purposes
+ * \return			32 bit registry value but with masked only bits that are pointed in documentation
+ *					for example GCONF has only 10 first bits pointed out, so it is masked with 0x3FF
+ */
+uint32_t read_access(TMC2226_NodeAddress node_address, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
@@ -92,13 +101,19 @@ uint32_t read_access(uint8_t node_address, TMC2226_ReadRegisters register_addres
 	if (response_based_CRC == response[7])
 	{
 		return 1;
-
 		//return apply_mask_and_convert(get_mask_for_given_register(register_address), *received_datagram);
 	}
 	return 0;
 }
 
-void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
+/**
+ * \brief			LL function for setting a registers in TMC2226
+ * \param[in]		node_address: chooses node to write to
+ * \param[in]		register_address: chooses register to write
+ * \param[in]		data: data to be set in the register
+ * \param[out]		sent_datagram: storing sent datagram for debugging purposes
+ */
+void write_access(TMC2226_NodeAddress node_address, TMC2226_WriteRegisters register_address,
 		uint32_t data, uint64_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
@@ -125,6 +140,12 @@ void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
 	}
 }
 
+/**
+ * \brief			Calculates CRC of datagram
+ * \param[in]		datagram: array that holds filled datagram
+ * \param[in]		datagram_length: length of array
+ * \return			CRC based on datagram and it's length
+ */
 uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length)
 {
 	uint8_t currentByte;
@@ -148,6 +169,12 @@ uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length)
 	return crc;
 }
 
+/**
+ * \brief			Function holds and returns mask accordingly to provided address
+ * \param[in]		register_address: register whom mask should be returned
+ * \return		 	Byte mask for certain register
+ * \note			By default it returns 0xFF..F mask so none of bytes masked are omitted
+ */
 uint32_t get_mask_for_given_register(TMC2226_ReadRegisters register_address)
 {
 	switch (register_address)
@@ -159,7 +186,13 @@ uint32_t get_mask_for_given_register(TMC2226_ReadRegisters register_address)
 	}
 }
 
+/**
+ * \brief			Applies mask, shifts bits and returns registry value
+ * \param[in]		mask: mask to be applied
+ * \param[in]		received_datagram: datagram from witch data is being extracted
+ * \return			Register value
+ */
 uint32_t apply_mask_and_convert(uint32_t mask, uint64_t received_datagram)
 {
-	return (uint32_t)((received_datagram & mask) >> 8);
+	return (uint32_t)((received_datagram >> 8) & mask);
 }
