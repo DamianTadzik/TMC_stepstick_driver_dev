@@ -4,12 +4,14 @@
  *  Created on: Dec 13, 2023
  *      Author: brzan
  */
+#include "TMC2226.h"
+
 #include "main.h"
 #include "usart.h"
-#include "TMC2226.h"
 #include "cmsis_os.h"
 
-// ########## API FUNCTIONS ##########
+
+/* ################ API ################*/
 
 /**
  * \brief			Initializer function that has to be called on TMC_HandleTypeDef
@@ -23,7 +25,7 @@ void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr)
 }
 
 
-void TMC_configure_uart_control(TMC_HandleTypeDef* htmc)	// TODO
+void TMC_configure_uart_control(TMC_HandleTypeDef* htmc)	// TODO below
 {
 	// For debugging purposes
 	uint64_t sent_datagram;
@@ -46,12 +48,10 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed)
 }
 
 
-
-// ########## COMMUNICATION FUNCTIONS ##########
+/* ################ Low level functions ################ */
 UART_HandleTypeDef *huart = &huart1;
 
-
-void read_access(uint8_t node_address, uint8_t register_address,
+void read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
@@ -61,22 +61,19 @@ void read_access(uint8_t node_address, uint8_t register_address,
 	datagram[2] = register_address | TMC2226_READ;
 	datagram[3] = calculate_CRC(datagram, 4);
 
-	// Clearing the buffer from anything that might have been there
-	//clear_uart_buffer(huart, 10);
-
 	// Sending the datagram
 	for (uint8_t i = 0; i < 4; i++)
 	{
-	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);
+	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it's okay to use HAL_MAX_DELAY
 	}
 
 	// Flush one byte
 	uint8_t flush = 0;
-	HAL_UART_Receive(huart, &flush, 1, 1);
+	HAL_UART_Receive(huart, &flush, 1, 1);	// TODO Check if it's okay to use 1 as Timeout
 
 	// Receiving response
 	uint8_t response[8] = {0};
-	HAL_UART_Receive(huart, response, 8, 1000);
+	HAL_UART_Receive(huart, response, 8, 1000);	// TODO Check if it's okay to use 1000 as Timeout
 
 	// Storing received datagram for later use
 	for (uint8_t i = 0; i < 8; i++)
@@ -89,12 +86,9 @@ void read_access(uint8_t node_address, uint8_t register_address,
 	{
 		*sent_datagram = (*sent_datagram << 8) | datagram[i];
 	}
-	int x = 0;
-	x++;
 }
 
-
-void write_access(uint8_t node_address, uint8_t register_address,
+void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
 		uint32_t data, uint64_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
@@ -111,7 +105,7 @@ void write_access(uint8_t node_address, uint8_t register_address,
 	// Sending the datagram
 	for (uint8_t i = 0; i < 8; i++)
 	{
-	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);
+	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it is okay to use HAL_MAX_DELAY
 	}
 
 	// Storing back the datagram we created earlier for debugging purposes
@@ -119,14 +113,10 @@ void write_access(uint8_t node_address, uint8_t register_address,
 	{
 		*sent_datagram = (*sent_datagram << 8) | datagram[i];
 	}
-	int x = 0;
-	x++;
 }
-
 
 uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length)
 {
-	//uint8_t* crc = datagram + (datagram_length-1); // CRC located in last byte of message
 	uint8_t currentByte;
 	uint8_t crc = 0;
 	for (uint8_t i = 0; i < (datagram_length-1); i++)
