@@ -9,10 +9,43 @@
 #include "TMC2226.h"
 #include "cmsis_os.h"
 
+// ########## API FUNCTIONS ##########
+
+/**
+ * \brief			Initializer function that has to be called on TMC_HandleTypeDef
+ * \param[in]		htmc: handle for proper TMC structure instance
+ * \param[in]		node_addr: node address based on MS1 and MS2 pins configuration
+ */
+void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr)
+{
+	htmc->node_addr = node_addr;
+
+}
+
+
+void TMC_configure_uart_control(TMC_HandleTypeDef* htmc)	// TODO
+{
+	// For debugging purposes
+	uint64_t sent_datagram;
+
+	// Setting the GCONF register
+	uint32_t GCONF_data = 0b0101000001;
+	write_access(htmc->node_addr, REG_GCONF, GCONF_data, &sent_datagram);
+}
+
 void TMC_enable_driver(uint8_t node_address)
 {
 
 }
+
+void TMC_set_speed(uint8_t node_address, uint32_t speed)
+{
+	// For debugging purposes
+	uint64_t sent_datagram;
+	write_access(node_address, REG_VACTUAL, speed, &sent_datagram);
+}
+
+
 
 // ########## COMMUNICATION FUNCTIONS ##########
 UART_HandleTypeDef *huart = &huart1;
@@ -25,7 +58,7 @@ void read_access(uint8_t node_address, uint8_t register_address,
 	uint8_t datagram[4];
 	datagram[0] = 0x05;
 	datagram[1] = node_address;
-	datagram[2] = register_address;
+	datagram[2] = register_address | TMC2226_READ;
 	datagram[3] = calculate_CRC(datagram, 4);
 
 	// Clearing the buffer from anything that might have been there
@@ -68,12 +101,12 @@ void write_access(uint8_t node_address, uint8_t register_address,
 	uint8_t datagram[8];
 	datagram[0] = TMC2226_SYNC;
 	datagram[1] = node_address;
-	datagram[2] = register_address | TMC2226_WRITE;
+	datagram[2] = register_address | 0x80;
 	datagram[3] = (data >> 24) & 0xFF;
 	datagram[4] = (data >> 16) & 0xFF;
 	datagram[5] = (data >> 8 ) & 0xFF;
 	datagram[6] = (data      ) & 0xFF;
-	datagram[7] = calculate_CRC(datagram, 7);
+	datagram[7] = calculate_CRC(datagram, 8);
 
 	// Sending the datagram
 	for (uint8_t i = 0; i < 8; i++)

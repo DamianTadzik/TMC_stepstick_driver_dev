@@ -8,18 +8,29 @@
 #ifndef INC_TMC2226_H_
 #define INC_TMC2226_H_
 
-//
-#define TMC2226_SYNC 0x05	// changed for test original is 0x05
-#define TMC2226_ADDR_0 0x00
-#define TMC2226_ADDR_1 0x01
-#define TMC2226_ADDR_2 0x02
-#define TMC2226_ADDR_3 0x03
+/**
+ * \brief			Those are possible addresses of TMC2226 nodes
+ */
+typedef enum {
+	TMC2226_ADDR_0 = 0x00u,					 	/* MS1 and MS2 pin set to LOW and LOW correspondingly */
+	TMC2226_ADDR_1 = 0x01u,						/* MS1 and MS2 pin set to HIGH and LOW correspondingly */
+	TMC2226_ADDR_2 = 0x02u,						/* MS1 and MS2 pin set to LOW and HIGH correspondingly */
+	TMC2226_ADDR_3 = 0x03u						/* MS1 and MS2 pin set to HIGH and HIGH correspondingly */
+} TMC2226_NodeAddress;
+
+/**
+ * \brief			This is a basic TMC2226 structure type
+ */
+typedef struct {
+	TMC2226_NodeAddress	node_addr;				/* This is a node address */
+	uint32_t	reg_GCONF;
+} TMC_HandleTypeDef;
+
+
+// Basic definitions used in LL section
+#define TMC2226_SYNC 0x05
 #define TMC2226_READ 0x00
 #define TMC2226_WRITE 0x80
-
-#define DATAGRAM_READ_SIZE 4
-#define DATAGRAM_RESPONSE_SIZE 8
-#define DATAGRAM_WRITE_SIZE 8
 
 // General register memory positions
 #define REG_GCONF 			0x00
@@ -30,12 +41,20 @@
 #define REG_OTP_READ 		0x05
 #define REG_IOIN 			0x06
 #define REG_FACTORY_CONF 	0x07
+// Velocity dependent control registers
+#define REG_VACTUAL 		0x22
 
-// ########## API ##########
+
+
+/* ########## API FUNCTIONS ########## */
+void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr);
+
+
+void TMC_configure_uart_control(TMC_HandleTypeDef* htmc);
+
 void TMC_enable_driver(uint8_t node_address);
 void TMC_disable_driver(uint8_t node_address);
-
-// ########## ##########
+void TMC_set_speed(uint8_t node_address, uint32_t speed);
 
 
 // ########## COMMUNICATION FUNCTIONS ##########
