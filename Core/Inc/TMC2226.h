@@ -78,14 +78,14 @@ typedef enum {
  */
 typedef struct {
 	TMC2226_NodeAddress	node_addr;				/* This is a node address */
-	uint32_t	reg_GCONF;						/* This could be the register value? */
+	uint32_t	reg_GCONF_val;
+	uint32_t 	reg_NODECONF_val;
 } TMC_HandleTypeDef;
 
 
 /* ################ API ################ */
 void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr);
 
-void TMC_configure_uart_control(TMC_HandleTypeDef* htmc);
 
 void TMC_enable_driver(uint8_t node_address);
 void TMC_disable_driver(uint8_t node_address);
@@ -97,13 +97,17 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed);
 #define TMC2226_READ 0x00
 #define TMC2226_WRITE 0x80
 
-/* ################ Low level functions ################ */
-void read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
+/* ################ Low Level functions ################ */
+uint32_t read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram);
 
 void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
 		uint32_t data, uint64_t *sent_datagram);
 
 uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length);
+
+uint32_t get_mask_for_given_register(TMC2226_ReadRegisters register_address);
+
+uint32_t apply_mask_and_convert(uint32_t mask, uint64_t received_datagram);
 
 #endif /* INC_TMC2226_H_ */

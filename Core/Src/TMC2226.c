@@ -20,20 +20,20 @@
  */
 void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr)
 {
+	uint64_t sent_datagram = 0;
 	htmc->node_addr = node_addr;
+	// Assume multi-node operation and set SENDDELAY in NODECONF to at least 2, that's from documentation
+	htmc->reg_NODECONF_val = (0x02<<8);
+	write_access(htmc->node_addr, W_NODECONF, htmc->reg_NODECONF_val, &sent_datagram);
+	// This is UART operation mode so we have to set pdn_disable to 1 in GCONF, also leaving defaults (for now)
+	htmc->reg_GCONF_val = 0b101000001;
+	write_access(htmc->node_addr, W_GCONF, htmc->reg_GCONF_val, &sent_datagram);
+
+
+	// TODO: Check if it is correctly configured by reading GCONF register and return
 
 }
 
-
-void TMC_configure_uart_control(TMC_HandleTypeDef* htmc)	// TODO below
-{
-	// For debugging purposes
-	uint64_t sent_datagram;
-
-	// Setting the GCONF register
-	uint32_t GCONF_data = 0b0101000001;
-	write_access(htmc->node_addr, W_GCONF, GCONF_data, &sent_datagram);
-}
 
 void TMC_enable_driver(uint8_t node_address)
 {
@@ -51,7 +51,7 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed)
 /* ################ Low level functions ################ */
 UART_HandleTypeDef *huart = &huart1;
 
-void read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
+uint32_t read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
@@ -86,6 +86,16 @@ void read_access(uint8_t node_address, TMC2226_ReadRegisters register_address,
 	{
 		*sent_datagram = (*sent_datagram << 8) | datagram[i];
 	}
+
+	// Check CRC correctness
+	uint8_t response_based_CRC = calculate_CRC(response, 8);	// TODO check if calc CRC works with response[8] filled with CRC
+	if (response_based_CRC == response[7])
+	{
+		return 1;
+
+		//return apply_mask_and_convert(get_mask_for_given_register(register_address), *received_datagram);
+	}
+	return 0;
 }
 
 void write_access(uint8_t node_address, TMC2226_WriteRegisters register_address,
@@ -136,4 +146,20 @@ uint8_t calculate_CRC(uint8_t* datagram, uint8_t datagram_length)
 		} // for CRC bit
 	} // for message byte
 	return crc;
+}
+
+uint32_t get_mask_for_given_register(TMC2226_ReadRegisters register_address)
+{
+	switch (register_address)
+	{
+		case R_GCONF:
+			return 0b1111111111;
+		default:
+			return 0xFFFFFFFF;
+	}
+}
+
+uint32_t apply_mask_and_convert(uint32_t mask, uint64_t received_datagram)
+{
+	return (uint32_t)((received_datagram & mask) >> 8);
 }
