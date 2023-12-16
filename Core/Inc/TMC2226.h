@@ -82,22 +82,6 @@ typedef struct {
 } TMC_HandleTypeDef;
 
 
-
-
-
-// General register memory positions
-#define REG_GCONF 			0x00
-#define REG_GSTAT 			0x01
-#define REG_IFCNT 			0x02
-#define REG_NODECONF 		0x03
-#define REG_OTP_PROG 		0x04
-#define REG_OTP_READ 		0x05
-#define REG_IOIN 			0x06
-#define REG_FACTORY_CONF 	0x07
-// Velocity dependent control registers
-#define REG_VACTUAL 		0x22
-
-
 /* ################ API ################ */
 void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr);
 

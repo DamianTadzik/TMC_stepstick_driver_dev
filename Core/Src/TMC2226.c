@@ -32,7 +32,7 @@ void TMC_configure_uart_control(TMC_HandleTypeDef* htmc)	// TODO below
 
 	// Setting the GCONF register
 	uint32_t GCONF_data = 0b0101000001;
-	write_access(htmc->node_addr, REG_GCONF, GCONF_data, &sent_datagram);
+	write_access(htmc->node_addr, W_GCONF, GCONF_data, &sent_datagram);
 }
 
 void TMC_enable_driver(uint8_t node_address)
@@ -44,7 +44,7 @@ void TMC_set_speed(uint8_t node_address, uint32_t speed)
 {
 	// For debugging purposes
 	uint64_t sent_datagram;
-	write_access(node_address, REG_VACTUAL, speed, &sent_datagram);
+	write_access(node_address, W_VACTUAL, speed, &sent_datagram);
 }
 
 

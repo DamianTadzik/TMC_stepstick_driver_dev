@@ -41,7 +41,7 @@ void start_task_stepper_motors(void *argument)
 					//TMC_configure(TMC2226_ADDR_0);
 					break;
 				case 2:
-					read_access(TMC2226_ADDR_0, REG_GCONF, &recieved_data, &sent_read);
+					read_access(TMC2226_ADDR_0, R_GCONF, &recieved_data, &sent_read);
 					break;
 				case 3:
 					TMC_set_speed(TMC2226_ADDR_0, 1000);
