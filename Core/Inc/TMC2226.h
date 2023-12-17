@@ -96,11 +96,15 @@ typedef struct {
 /* ################ API ################ */
 void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_HandleTypeDef* huart);
 
+void TMC_set_speed(TMC_HandleTypeDef* htmc, uint32_t speed);
+
+void TMC_set_angle(TMC_HandleTypeDef* htmc, uint16_t angle);
+
 
 // Not implemented yet
 void TMC_enable_driver(uint8_t node_address);
 void TMC_disable_driver(uint8_t node_address);
-void TMC_set_speed(uint8_t node_address, uint32_t speed);
+
 
 
 /* Basic definitions used in LL section */

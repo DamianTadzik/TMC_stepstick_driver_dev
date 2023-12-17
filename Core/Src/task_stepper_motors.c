@@ -34,16 +34,16 @@ void start_task_stepper_motors(void *argument)
 			switch (trigger_counter)
 			{
 				case 1:
-					//TMC_configure(TMC2226_ADDR_0);
+					data = read_access(&htmc1, R_SG_RESULT, &recieved_data, &sent_read);
 					break;
 				case 2:
-					//read_access(TMC2226_ADDR_0, R_GCONF, &recieved_data, &sent_read);
+					TMC_set_speed(&htmc1, 2000);
 					break;
 				case 3:
-					//TMC_set_speed(TMC2226_ADDR_0, 1000);
+					TMC_set_speed(&htmc1, -2000);
 					break;
 				case 4:
-					//TMC_set_speed(TMC2226_ADDR_0, 0);
+					TMC_set_speed(&htmc1, 0);
 					break;
 				default:
 					trigger_counter = 0;

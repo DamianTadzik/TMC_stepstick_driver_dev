@@ -41,12 +41,11 @@ void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_Handl
 //
 //}
 //
-//void TMC_set_speed(uint8_t node_address, uint32_t speed)
-//{
-//	// For debugging purposes
-//	uint64_t sent_datagram;
-//	write_access(node_address, W_VACTUAL, speed, &sent_datagram);
-//}
+void TMC_set_speed(TMC_HandleTypeDef* htmc, uint32_t speed)
+{
+	uint64_t sent_datagram;
+	write_access(htmc, W_VACTUAL, speed, &sent_datagram);
+}
 
 
 /* ################ Low level functions ################ */
@@ -96,11 +95,10 @@ uint32_t read_access(TMC_HandleTypeDef* htmc, TMC2226_ReadRegisters register_add
 	}
 
 	// Check CRC correctness
-	uint8_t response_based_CRC = calculate_CRC(response, 8);	// TODO check if calc CRC works with response[8] filled with CRC
+	uint8_t response_based_CRC = calculate_CRC(response, 8);
 	if (response_based_CRC == response[7])
 	{
-		return 1;
-		//return apply_mask_and_convert(get_mask_for_given_register(register_address), *received_datagram);
+		return apply_mask_and_convert(get_mask_for_given_register(register_address), *received_datagram);
 	}
 	return 0;
 }
