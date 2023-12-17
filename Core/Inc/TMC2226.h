@@ -80,8 +80,15 @@ typedef struct {
 	UART_HandleTypeDef* huart;					/* UART handler pointer */
 	TMC2226_NodeAddress	node_address;			/* This is a node address */
 
+	// PIN EN
+
+	// PIN DIR
+
+	// PIN STEP
+
 	uint32_t	reg_GCONF_val;
 	uint32_t 	reg_NODECONF_val;
+
 
 } TMC_HandleTypeDef;
 

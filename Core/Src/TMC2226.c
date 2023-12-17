@@ -28,13 +28,11 @@ void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_Handl
 	// Assume multi-node operation and set SENDDELAY in NODECONF to at least 2, that's from documentation
 	htmc->reg_NODECONF_val = (0x02<<8);
 	write_access(htmc, W_NODECONF, htmc->reg_NODECONF_val, &sent_datagram);
-	// This is UART operation mode so we have to set pdn_disable to 1 in GCONF, also leaving defaults (for now)
+	// This is UART operation mode so we have to set pdn_disable to 1 in GCONF,
+	// also setting 1(default) on I_scale_analog
 	htmc->reg_GCONF_val = 0b101000001;
 	write_access(htmc, W_GCONF, htmc->reg_GCONF_val, &sent_datagram);
-
-
-	// TODO: Check if it is correctly configured by reading GCONF register and return
-
+	// SET
 }
 
 
@@ -181,7 +179,17 @@ uint32_t get_mask_for_given_register(TMC2226_ReadRegisters register_address)
 	switch (register_address)
 	{
 		case R_GCONF:
-			return 0b1111111111;
+			return 0b1111111111;		// TODO: Finish this dude
+		case R_GSTAT:
+			return 0b111;
+		case R_IFCNT:
+			return 0b11111111;
+		case R_OTP_READ:
+			return 0xFFFFFF;
+		case R_IOIN:
+			return 0xFF0003FF;
+		case R_FACTORY_CONF:
+			return 0b1100011111;
 		default:
 			return 0xFFFFFFFF;
 	}
