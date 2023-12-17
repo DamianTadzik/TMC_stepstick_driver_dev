@@ -17,17 +17,20 @@
  * \brief			Initializer function that has to be called on TMC_HandleTypeDef
  * \param[in]		htmc: handle for proper TMC structure instance
  * \param[in]		node_addr: node address based on MS1 and MS2 pins configuration
+ * \param[in]		huart: handle for specific UART interface
  */
-void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr)
+void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_HandleTypeDef* huart)
 {
 	uint64_t sent_datagram = 0;
-	htmc->node_addr = node_addr;
+
+	htmc->huart = huart;
+	htmc->node_address = node_addr;
 	// Assume multi-node operation and set SENDDELAY in NODECONF to at least 2, that's from documentation
 	htmc->reg_NODECONF_val = (0x02<<8);
-	write_access(htmc->node_addr, W_NODECONF, htmc->reg_NODECONF_val, &sent_datagram);
+	write_access(htmc, W_NODECONF, htmc->reg_NODECONF_val, &sent_datagram);
 	// This is UART operation mode so we have to set pdn_disable to 1 in GCONF, also leaving defaults (for now)
 	htmc->reg_GCONF_val = 0b101000001;
-	write_access(htmc->node_addr, W_GCONF, htmc->reg_GCONF_val, &sent_datagram);
+	write_access(htmc, W_GCONF, htmc->reg_GCONF_val, &sent_datagram);
 
 
 	// TODO: Check if it is correctly configured by reading GCONF register and return
@@ -35,54 +38,52 @@ void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr)
 }
 
 
-void TMC_enable_driver(uint8_t node_address)
-{
-
-}
-
-void TMC_set_speed(uint8_t node_address, uint32_t speed)
-{
-	// For debugging purposes
-	uint64_t sent_datagram;
-	write_access(node_address, W_VACTUAL, speed, &sent_datagram);
-}
+//void TMC_enable_driver(uint8_t node_address)
+//{
+//
+//}
+//
+//void TMC_set_speed(uint8_t node_address, uint32_t speed)
+//{
+//	// For debugging purposes
+//	uint64_t sent_datagram;
+//	write_access(node_address, W_VACTUAL, speed, &sent_datagram);
+//}
 
 
 /* ################ Low level functions ################ */
-UART_HandleTypeDef *huart = &huart1;
-
 /**
  * \brief			LL function for obtaining registry value from TMC2226
- * \param[in]		node_address: chooses node to read from
+ * \param[in]		htmc: something like "self" parameter
  * \param[in]		register_address: readable register address to read from
  * \param[out]		received_datagram: storing received datagram for debugging purposes
  * \param[out]		sent_datagram: storing sent datagram for debugging purposes
  * \return			32 bit registry value but with masked only bits that are pointed in documentation
  *					for example GCONF has only 10 first bits pointed out, so it is masked with 0x3FF
  */
-uint32_t read_access(TMC2226_NodeAddress node_address, TMC2226_ReadRegisters register_address,
+uint32_t read_access(TMC_HandleTypeDef* htmc, TMC2226_ReadRegisters register_address,
 		uint64_t *received_datagram, uint32_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
 	uint8_t datagram[4];
 	datagram[0] = 0x05;
-	datagram[1] = node_address;
+	datagram[1] = htmc->node_address;
 	datagram[2] = register_address | TMC2226_READ;
 	datagram[3] = calculate_CRC(datagram, 4);
 
 	// Sending the datagram
 	for (uint8_t i = 0; i < 4; i++)
 	{
-	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it's okay to use HAL_MAX_DELAY
+	    HAL_UART_Transmit(htmc->huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it's okay to use HAL_MAX_DELAY
 	}
 
 	// Flush one byte
 	uint8_t flush = 0;
-	HAL_UART_Receive(huart, &flush, 1, 1);	// TODO Check if it's okay to use 1 as Timeout
+	HAL_UART_Receive(htmc->huart, &flush, 1, 1);	// TODO Check if it's okay to use 1 as Timeout
 
 	// Receiving response
 	uint8_t response[8] = {0};
-	HAL_UART_Receive(huart, response, 8, 1000);	// TODO Check if it's okay to use 1000 as Timeout
+	HAL_UART_Receive(htmc->huart, response, 8, 1000);	// TODO Check if it's okay to use 1000 as Timeout
 
 	// Storing received datagram for later use
 	for (uint8_t i = 0; i < 8; i++)
@@ -108,18 +109,18 @@ uint32_t read_access(TMC2226_NodeAddress node_address, TMC2226_ReadRegisters reg
 
 /**
  * \brief			LL function for setting a registers in TMC2226
- * \param[in]		node_address: chooses node to write to
+ * \param[in]		htmc: something like "self"
  * \param[in]		register_address: chooses register to write
  * \param[in]		data: data to be set in the register
  * \param[out]		sent_datagram: storing sent datagram for debugging purposes
  */
-void write_access(TMC2226_NodeAddress node_address, TMC2226_WriteRegisters register_address,
+void write_access(TMC_HandleTypeDef* htmc, TMC2226_WriteRegisters register_address,
 		uint32_t data, uint64_t *sent_datagram)
 {
 	// Datagram creation, CRC calculation
 	uint8_t datagram[8];
 	datagram[0] = TMC2226_SYNC;
-	datagram[1] = node_address;
+	datagram[1] = htmc->node_address;
 	datagram[2] = register_address | 0x80;
 	datagram[3] = (data >> 24) & 0xFF;
 	datagram[4] = (data >> 16) & 0xFF;
@@ -130,7 +131,7 @@ void write_access(TMC2226_NodeAddress node_address, TMC2226_WriteRegisters regis
 	// Sending the datagram
 	for (uint8_t i = 0; i < 8; i++)
 	{
-	    HAL_UART_Transmit(huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it is okay to use HAL_MAX_DELAY
+	    HAL_UART_Transmit(htmc->huart, &datagram[i], 1, HAL_MAX_DELAY);	// TODO Check if it is okay to use HAL_MAX_DELAY
 	}
 
 	// Storing back the datagram we created earlier for debugging purposes

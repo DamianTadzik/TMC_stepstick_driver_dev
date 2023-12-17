@@ -20,13 +20,9 @@ uint32_t data = 0;
 
 void start_task_stepper_motors(void *argument)
 {
-	/* ## EXAMPLE OF USE LL DRIVER */
-	//write_access(TMC2226_ADDR_0, REG_GCONF, data, &sent_write);
-	//read_access(TMC2226_ADDR_0, REG_NODECONF, &recieved_data, &sent_read);
-
 	/* ## EXAMPLE OF API USE ## */
 	TMC_HandleTypeDef htmc1;
-	TMC_Init(&htmc1, TMC2226_ADDR_0);
+	TMC_Init(&htmc1, TMC2226_ADDR_0, &huart1);
 
 	uint8_t trigger_counter = 0;
 	while (1)
@@ -41,13 +37,13 @@ void start_task_stepper_motors(void *argument)
 					//TMC_configure(TMC2226_ADDR_0);
 					break;
 				case 2:
-					read_access(TMC2226_ADDR_0, R_GCONF, &recieved_data, &sent_read);
+					//read_access(TMC2226_ADDR_0, R_GCONF, &recieved_data, &sent_read);
 					break;
 				case 3:
-					TMC_set_speed(TMC2226_ADDR_0, 1000);
+					//TMC_set_speed(TMC2226_ADDR_0, 1000);
 					break;
 				case 4:
-					TMC_set_speed(TMC2226_ADDR_0, 0);
+					//TMC_set_speed(TMC2226_ADDR_0, 0);
 					break;
 				default:
 					trigger_counter = 0;
