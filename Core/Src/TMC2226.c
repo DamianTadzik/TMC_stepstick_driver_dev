@@ -7,6 +7,7 @@
 #include "TMC2226.h"
 
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "cmsis_os.h"
 
@@ -15,36 +16,81 @@
 
 /**
  * \brief			Initializer function that has to be called on TMC_HandleTypeDef
+ * 					It sets structure parameters and some registers in the device
  * \param[in]		htmc: handle for proper TMC structure instance
  * \param[in]		node_addr: node address based on MS1 and MS2 pins configuration
+ * \param[in]		htim: handle for specific TIM interface
  * \param[in]		huart: handle for specific UART interface
+ * \param[in]		engine_steps_per_full_turn: specific engine characteristic typically 200
  */
-void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_HandleTypeDef* huart)
+void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, TIM_HandleTypeDef* htim,
+			UART_HandleTypeDef* huart, uint16_t engine_steps_per_full_turn)
 {
 	uint64_t sent_datagram = 0;
 
+	htmc->htim = htim;
 	htmc->huart = huart;
 	htmc->node_address = node_addr;
+	htmc->engine_steps_per_full_turn = engine_steps_per_full_turn;
+
+	// Internal clock used
+	htmc->clock_constant = 0.715;
+	// Microstep resolution as fullstep
+	htmc->microstep_resolution = uSteps_256;
+
 	// Assume multi-node operation and set SENDDELAY in NODECONF to at least 2, that's from documentation
+	/*
+	 * Assuming multi-node operation, and according to documentation
+	 * so SENDDELAY for read access (time until reply is sent)
+	 * is set to at least 2: respond is delayed 3*8 bit times
+	 */
 	htmc->reg_NODECONF_val = (0x02<<8);
 	write_access(htmc, W_NODECONF, htmc->reg_NODECONF_val, &sent_datagram);
-	// This is UART operation mode so we have to set pdn_disable to 1 in GCONF,
-	// also setting 1(default) on I_scale_analog
-	htmc->reg_GCONF_val = 0b101000001;
+
+	/*
+	 * GCONF register configuration:
+	 * 1 I_scale_analog - VREF voltage as current reference
+	 * 0 internal_Rsense - external sense resistors used
+	 * 0 en_SpreadCycle
+	 * 0 shaft - spinning direction
+	 * 0 index_otpw
+	 * 1 index_step
+	 * 1 pdn_disable - UART control on PDN pin mode
+	 * 1 mstep_reg_select - microstep resolution selected by MRES in CHOPCONF register
+	 * 1 multistep_filt
+	 * 0 test_mode - never set to 1
+	 */
+	htmc->reg_GCONF_val = 0b0111100001;
 	write_access(htmc, W_GCONF, htmc->reg_GCONF_val, &sent_datagram);
-	// SET
+
+	/*
+	 * CHOPCONF driver configuration (Reset default=0x10000053)
+	 * 3:0		= 0011 	TOFF and driver
+	 * 6:4		= 101 	HSTRT
+	 * 10:7		= 0000 	HEND
+	 * 14:11	= 0000 	 reserved
+	 * 16:15	= 00 	TBL
+	 * 17		= 0		vsense
+	 * 23:18 	= 000000 reserved
+	 * 27:24	= 0000 	MRES - native 256 microstepping higher value -> resolution divided by 2
+	 * 28		= 1 	intpol
+	 * 29		= 0 	dedge - enable double edge step pulses
+	 * 30		= 0		diss2g
+	 * 31		= 0		diss2vs
+	 */
+//	htmc->reg_CHOPCONF_val = 0x10000053; // + (htmc->microstep_resolution << 24);
+//	write_access(htmc, W_CHOPCONF, htmc->reg_CHOPCONF_val, &sent_datagram);
 }
 
-
-//void TMC_enable_driver(uint8_t node_address)
-//{
-//
-//}
-//
-void TMC_set_speed(TMC_HandleTypeDef* htmc, uint32_t speed)
+/**
+ * \brief			This runs stepper motor at desired speed
+ */
+void TMC_set_speed_by_UART(TMC_HandleTypeDef* htmc, float rpm_speed)
 {
 	uint64_t sent_datagram;
-	write_access(htmc, W_VACTUAL, speed, &sent_datagram);
+	float FSC_x_USC = htmc->engine_steps_per_full_turn * (1 << (8 - htmc->microstep_resolution));
+	float vactual_speed = (rpm_speed * FSC_x_USC / htmc->clock_constant);
+	write_access(htmc, W_VACTUAL, (int32_t)vactual_speed, &sent_datagram);
 }
 
 
@@ -80,7 +126,7 @@ uint32_t read_access(TMC_HandleTypeDef* htmc, TMC2226_ReadRegisters register_add
 
 	// Receiving response
 	uint8_t response[8] = {0};
-	HAL_UART_Receive(htmc->huart, response, 8, 1000);	// TODO Check if it's okay to use 1000 as Timeout
+	HAL_UART_Receive(htmc->huart, response, 8, HAL_MAX_DELAY);	// TODO Check if it's okay to use 1000 as Timeout
 
 	// Storing received datagram for later use
 	for (uint8_t i = 0; i < 8; i++)
@@ -203,3 +249,4 @@ uint32_t apply_mask_and_convert(uint32_t mask, uint64_t received_datagram)
 {
 	return (uint32_t)((received_datagram >> 8) & mask);
 }
+

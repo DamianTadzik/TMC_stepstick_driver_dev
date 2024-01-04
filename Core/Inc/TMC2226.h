@@ -9,6 +9,7 @@
 #define INC_TMC2226_H_
 
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "cmsis_os.h"
 
@@ -72,31 +73,48 @@ typedef enum {
 	W_PWMCONF = 0x70u
 } TMC2226_WriteRegisters;
 
+/*
+ * \brief			Possible values for MRES in CHOPCONF register
+ * \note			For getting resolution just use simple calculation
+ * 					resolution = 1 << (8 - TMC2226_MRES_steps);
+ */
+typedef enum {
+	uSteps_256 = 0b0000u,
+	uSteps_128 = 0b0001u,
+	uSteps_64 = 0b0010u,
+	uSteps_32 = 0b0011u,
+	uSteps_16 = 0b0100u,
+	uSteps_8 = 0b0101u,
+	uSteps_4 = 0b0110u,
+	uSteps_2 = 0b0111u,
+	fullStep = 0b1000u
+} TMC2226_MRES_steps;
+
+
 /**
  * \brief			This is a basic TMC2226 structure type
  * \note 			No note yet ;)
  */
 typedef struct {
+	TIM_HandleTypeDef* htim;					/* TIMER handler pointer */
 	UART_HandleTypeDef* huart;					/* UART handler pointer */
 	TMC2226_NodeAddress	node_address;			/* This is a node address */
+	uint16_t engine_steps_per_full_turn; 		/* engine resolution */
+	TMC2226_MRES_steps microstep_resolution; 	/* micro-steps per full step */
 
-	// PIN EN
-
-	// PIN DIR
-
-	// PIN STEP
+	float clock_constant;
 
 	uint32_t	reg_GCONF_val;
 	uint32_t 	reg_NODECONF_val;
-
-
+	uint32_t 	reg_CHOPCONF_val;
 } TMC_HandleTypeDef;
 
 
 /* ################ API ################ */
-void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, UART_HandleTypeDef* huart);
+void TMC_Init(TMC_HandleTypeDef* htmc, TMC2226_NodeAddress node_addr, TIM_HandleTypeDef* htim,
+		UART_HandleTypeDef* huart, uint16_t engine_steps_per_full_turn);
 
-void TMC_set_speed(TMC_HandleTypeDef* htmc, uint32_t speed);
+void TMC_set_speed_by_UART(TMC_HandleTypeDef* htmc, float rpm_speed);
 
 void TMC_set_angle(TMC_HandleTypeDef* htmc, uint16_t angle);
 

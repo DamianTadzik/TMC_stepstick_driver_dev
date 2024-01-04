@@ -172,10 +172,11 @@ void SystemClock_Config(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if (GPIO_Pin == B1_Pin && triggered == 0)
+	if (GPIO_Pin == B1_Pin && command_triggered == 0)
 	{
 		HAL_TIM_Base_Start_IT(&htim2);
-		triggered = 1;
+		command_triggered = 1;
+		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 	}
 }
 
